@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Oil & Gas Field Operations</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="header">
+        <h1>🛢️ Digital Twin System</h1>
+        <div class="subtitle">Redis Enterprise Demo for Halliburton - Real-time Digital Twin for Oil & Gas Operations</div>
+    </div>
+
+    <!-- Navigation Menu -->
+    <nav class="nav-menu">
+        <a href="dashboard.html" class="nav-link active">📊 Dashboard</a>
+        <a href="sessions.html" class="nav-link">👥 Session Management</a>
+        <a href="search.html" class="nav-link">🔍 Search Field Assets</a>
+    </nav>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard-container">
+        <!-- Geospatial Asset Tracking -->
+        <div class="panel">
+            <h2>🗺️ Field Asset Locations</h2>
+            <div id="map"></div>
+        </div>
+        
+        <!-- Real-time KPIs -->
+        <div class="panel">
+            <h2>📊 Operational KPIs</h2>
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-value" id="total-assets">--</div>
+                    <div class="kpi-label">Total Assets</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value" id="active-sensors">--</div>
+                    <div class="kpi-label">Active Sensors</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value" id="avg-temperature">--°F</div>
+                    <div class="kpi-label">Avg Temperature</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value" id="avg-pressure">--</div>
+                    <div class="kpi-label">Avg Pressure (PSI)</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sensor Data Streaming -->
+        <div class="panel">
+            <h2>📡 Live Sensor Data</h2>
+            <div class="sensor-list" id="sensor-list">
+                <div class="loading">Loading sensor data...</div>
+            </div>
+        </div>
+        
+        <!-- Alerts and Notifications -->
+        <div class="panel">
+            <h2>🚨 Active Alerts</h2>
+            <div class="sensor-list" id="alerts-list">
+                <div class="loading">Loading alerts...</div>
+            </div>
+        </div>
+
+        <!-- Redis Command Monitor -->
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h2>⚡ Redis Commands</h2>
+                <button onclick="clearDashboardCommands()"
+                        style="background: #e74c3c; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 3px; cursor: pointer; font-size: 0.7rem;">
+                    Clear History
+                </button>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem;">
+                <span>Read: <span id="read-count" style="color: #3498db;">0</span></span>
+                <span>Write: <span id="write-count" style="color: #e74c3c;">0</span></span>
+                <span>Total: <span id="total-commands">0</span></span>
+            </div>
+            <div class="command-log" id="command-log">
+                <div class="loading">Loading commands...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Common JavaScript -->
+    <script src="js/common.js"></script>
+    
+    <!-- Dashboard-specific JavaScript -->
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Assets - Oil & Gas Field Operations</title>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="header">
+        <h1>🛢️ Digital Twin System</h1>
+        <div class="subtitle">Redis Enterprise Demo for Halliburton - Real-time Digital Twin for Oil & Gas Operations</div>
+    </div>
+
+    <!-- Navigation Menu -->
+    <nav class="nav-menu">
+        <a href="dashboard.html" class="nav-link">📊 Dashboard</a>
+        <a href="sessions.html" class="nav-link">👥 Session Management</a>
+        <a href="search.html" class="nav-link active">🔍 Search Field Assets</a>
+    </nav>
+
+    <!-- Search Content -->
+    <div class="search-container">
+        <div class="dashboard-container">
+            <!-- Search Interface -->
+            <div class="panel">
+                <h2>🔍 Search Field Assets</h2>
+                
+                <!-- Search Input -->
+                <div style="margin-bottom: 1rem;">
+                    <input type="text" id="search-input" placeholder="Search by name, model, or description..."
+                           style="width: 100%; padding: 0.5rem; background: #34495e; border: 1px solid #3498db; color: #ecf0f1; border-radius: 4px; font-size: 0.9rem;">
+                </div>
+
+                <!-- Filters -->
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                    <!-- Type Filter -->
+                    <div>
+                        <label style="display: block; margin-bottom: 0.3rem; color: #bdc3c7; font-size: 0.9rem;">Asset Type:</label>
+                        <select id="type-filter" style="width: 100%; padding: 0.5rem; background: #34495e; border: 1px solid #3498db; color: #ecf0f1; border-radius: 4px;">
+                            <option value="">All Types</option>
+                        </select>
+                    </div>
+
+                    <!-- Region Filter -->
+                    <div>
+                        <label style="display: block; margin-bottom: 0.3rem; color: #bdc3c7; font-size: 0.9rem;">Region:</label>
+                        <select id="region-filter" style="width: 100%; padding: 0.5rem; background: #34495e; border: 1px solid #3498db; color: #ecf0f1; border-radius: 4px;">
+                            <option value="">All Regions</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Manufacturer Filter (Radio Buttons) -->
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.3rem; color: #bdc3c7; font-size: 0.9rem;">Manufacturer:</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="manufacturer-all" name="manufacturer" value="" checked>
+                            <label for="manufacturer-all">All</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="manufacturer-halliburton" name="manufacturer" value="Halliburton">
+                            <label for="manufacturer-halliburton">Halliburton</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="manufacturer-schlumberger" name="manufacturer" value="Schlumberger">
+                            <label for="manufacturer-schlumberger">Schlumberger</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="manufacturer-baker" name="manufacturer" value="Baker Hughes">
+                            <label for="manufacturer-baker">Baker Hughes</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="manufacturer-weatherford" name="manufacturer" value="Weatherford">
+                            <label for="manufacturer-weatherford">Weatherford</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Filter (Radio Buttons) -->
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.3rem; color: #bdc3c7; font-size: 0.9rem;">Status:</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="status-all" name="status" value="" checked>
+                            <label for="status-all">All</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="status-active" name="status" value="active">
+                            <label for="status-active">Active</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="status-maintenance" name="status" value="maintenance">
+                            <label for="status-maintenance">Maintenance</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="status-offline" name="status" value="offline">
+                            <label for="status-offline">Offline</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sort Options (Radio Buttons) -->
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.3rem; color: #bdc3c7; font-size: 0.9rem;">Sort By:</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="sort-none" name="sort" value="none" checked>
+                            <label for="sort-none">Relevance</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="sort-status-asc" name="sort" value="status-asc">
+                            <label for="sort-status-asc">Status (A-Z)</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="sort-status-desc" name="sort" value="status-desc">
+                            <label for="sort-status-desc">Status (Z-A)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search Buttons -->
+                <div style="display: flex; gap: 0.5rem;">
+                    <button onclick="performSearch()" 
+                            style="flex: 1; padding: 0.6rem; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                        🔍 Search Assets
+                    </button>
+                    <button onclick="clearSearch()" 
+                            style="flex: 1; padding: 0.6rem; background: #7f8c8d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                        🔄 Clear Filters
+                    </button>
+                </div>
+
+                <!-- Search Summary -->
+                <div id="search-summary" style="margin-top: 1rem; color: #bdc3c7; font-size: 0.9rem; font-style: italic;">
+                    Ready to search assets...
+                </div>
+            </div>
+
+            <!-- Search Results -->
+            <div class="panel">
+                <h2>📋 Search Results</h2>
+                <div class="search-results-container" id="search-results">
+                    <div class="loading">Enter search criteria and click "Search Assets" to find matching assets.</div>
+                </div>
+            </div>
+
+            <!-- Redis Command Monitor for Search -->
+            <div class="panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h2>⚡ Redis Commands (Search Context)</h2>
+                    <button onclick="clearSearchCommands()"
+                            style="background: #e74c3c; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 3px; cursor: pointer; font-size: 0.7rem;">
+                        Clear History
+                    </button>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem;">
+                    <span>FT.SEARCH: <span id="search-ft-search-count" style="color: #3498db;">0</span></span>
+                    <span>FT.TAGVALS: <span id="search-ft-tagvals-count" style="color: #f39c12;">0</span></span>
+                    <span>Total: <span id="search-total-commands">0</span></span>
+                </div>
+                <div class="command-log" id="search-command-log">
+                    <div class="loading">Loading commands...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Common JavaScript -->
+    <script src="js/common.js"></script>
+
+    <!-- Search-specific JavaScript -->
+    <script src="js/search.js"></script>
+</body>
+</html>
+

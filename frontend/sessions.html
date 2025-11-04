@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Management - Oil & Gas Field Operations</title>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="header">
+        <h1>🛢️ Digital Twin System</h1>
+        <div class="subtitle">Redis Enterprise Demo for Halliburton - Real-time Digital Twin for Oil & Gas Operations</div>
+    </div>
+
+    <!-- Navigation Menu -->
+    <nav class="nav-menu">
+        <a href="dashboard.html" class="nav-link">📊 Dashboard</a>
+        <a href="sessions.html" class="nav-link active">👥 Session Management</a>
+        <a href="search.html" class="nav-link">🔍 Search Field Assets</a>
+    </nav>
+
+    <!-- Session Management Content -->
+    <div class="session-container">
+        <div class="dashboard-container" style="grid-template-columns: 1fr; grid-template-rows: auto auto;">
+            <!-- Session Metrics Panel -->
+            <div class="session-panel">
+                <h2>👥 Active User Sessions</h2>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="total-sessions">--</div>
+                        <div class="kpi-label">Total Active Sessions</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="unique-users">--</div>
+                        <div class="kpi-label">Unique Users</div>
+                    </div>
+                </div>
+
+                <h3 style="color: #3498db; margin-bottom: 1rem; font-size: 1rem;">Session Details</h3>
+                <div class="session-list" id="session-list">
+                    <div class="loading">Loading sessions...</div>
+                </div>
+            </div>
+
+            <!-- Redis Command Monitor for Sessions -->
+            <div class="panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h2>⚡ Redis Commands (Session Context)</h2>
+                    <button onclick="clearSessionCommands()"
+                            style="background: #e74c3c; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 3px; cursor: pointer; font-size: 0.7rem;">
+                        Clear History
+                    </button>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem;">
+                    <span>Read: <span id="session-read-count" style="color: #3498db;">0</span></span>
+                    <span>Write: <span id="session-write-count" style="color: #e74c3c;">0</span></span>
+                    <span>Total: <span id="session-total-commands">0</span></span>
+                </div>
+                <div class="command-log" id="session-command-log">
+                    <div class="loading">Loading commands...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Common JavaScript -->
+    <script src="js/common.js"></script>
+    
+    <!-- Sessions-specific JavaScript -->
+    <script src="js/sessions.js"></script>
+</body>
+</html>
+

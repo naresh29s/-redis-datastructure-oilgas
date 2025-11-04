@@ -59,6 +59,37 @@ This automated script will:
 
 ---
 
+## 🆕 Recent Improvements
+
+### Backend Refactoring (Latest)
+
+The backend has been completely refactored from a monolithic 1,280-line file into a modular, maintainable architecture using Flask Blueprints:
+
+**✨ What's New:**
+- 🏗️ **Modular Architecture** - Routes organized into 6 separate blueprint modules
+- ⚡ **Performance Optimization** - Redis pipelining reduces asset loading from 7.6s to <1s (87% faster)
+- 📦 **Better Organization** - Each feature area has its own module (dashboard, sensors, alerts, search, sessions, monitoring)
+- 🔧 **Easier Maintenance** - Find and modify specific functionality quickly
+- 📊 **Reduced Complexity** - Main app.py reduced from 1,280 to 531 lines
+
+**📈 Performance Improvements:**
+- **Asset Loading:** 7.6s → <1s (87% faster) using Redis pipelining
+- **Network Calls:** Reduced from 29 sequential calls to 2 pipelined calls
+- **Timeout Handling:** Graceful degradation with AbortController
+- **Connection Pooling:** Efficient Redis connection reuse
+
+### Frontend Refactoring (Previous)
+
+The frontend was refactored from a single-page application into a multi-page application with shared components:
+
+**✨ What Changed:**
+- 🎨 **Multi-Page Architecture** - Separate HTML files for Dashboard, Sessions, and Search
+- 🔄 **Shared Components** - Common CSS and JavaScript utilities
+- 📱 **Better UX** - Faster page loads and improved navigation
+- 🐛 **Bug Fixes** - Fixed alerts panel filtering and asset marker interactions
+
+---
+
 ## 📋 Prerequisites
 
 ### Required Software
@@ -1256,33 +1287,102 @@ graph TB
 
 ### Component Overview
 
-#### 🌐 Frontend (Single Page Application)
+#### 🌐 Frontend (Multi-Page Application)
 - **Technology:** Vanilla JavaScript, HTML5, CSS3
+- **Architecture:** Modular multi-page application with shared components
 - **Features:**
-  - Tabbed interface (Dashboard, Sessions, Search)
+  - Three separate pages: Dashboard, Sessions, Search
   - Leaflet.js for interactive maps
   - Real-time data updates (5-second polling)
   - Responsive design for desktop and mobile
-- **Location:** `frontend/index.html`
+  - Optimized asset loading with timeout handling
+- **Structure:**
+  ```
+  frontend/
+  ├── dashboard.html          # Main operational dashboard
+  ├── sessions.html           # User session management
+  ├── search.html             # Asset search interface
+  ├── css/
+  │   └── styles.css          # Shared styles
+  └── js/
+      ├── common.js           # Shared utilities and API calls
+      ├── dashboard.js        # Dashboard-specific logic
+      ├── sessions.js         # Session management logic
+      └── search.js           # Search functionality
+  ```
 
-#### ⚙️ Backend (Flask REST API)
+#### ⚙️ Backend (Flask REST API with Blueprints)
 - **Technology:** Python 3.8+, Flask 2.3, Flask-CORS
+- **Architecture:** Modular blueprint-based organization
 - **Port:** 5001
 - **Responsibilities:**
-  - Serve frontend HTML
-  - Expose REST APIs for all features
-  - Manage Redis connections
-  - Monitor Redis commands
-  - Handle session lifecycle
-- **Location:** `backend/app.py`
-- **Key Endpoints:**
-  - `GET /` - Serve frontend
-  - `GET /api/dashboard/kpis` - Dashboard metrics
-  - `GET /api/assets` - All field assets
-  - `GET /api/assets/nearby` - Geospatial queries
-  - `GET /api/sessions` - Active sessions
-  - `GET /api/search/assets` - Full-text search
-  - `POST /api/sensors/data` - Ingest sensor data
+  - Serve frontend HTML/CSS/JS files
+  - Expose REST APIs organized by functionality
+  - Manage Redis connections with connection pooling
+  - Monitor Redis commands for demo purposes
+  - Handle session lifecycle with TTL management
+  - Optimize performance with Redis pipelining
+
+- **Structure:**
+  ```
+  backend/
+  ├── app.py                  # Main Flask application (531 lines)
+  │   ├── RedisCommandMonitor # Command logging for demo
+  │   ├── SessionManager      # User session management
+  │   ├── Redis connection    # Enterprise Cloud connection
+  │   └── Blueprint registry  # Route module registration
+  └── routes/                 # Modular route blueprints
+      ├── __init__.py         # Blueprint exports
+      ├── dashboard.py        # Asset tracking & KPIs (357 lines)
+      ├── sensors.py          # Sensor data streaming (159 lines)
+      ├── alerts.py           # Alert management (56 lines)
+      ├── search.py           # RediSearch functionality (145 lines)
+      ├── sessions.py         # Session management (152 lines)
+      └── monitoring.py       # Redis monitoring (70 lines)
+  ```
+
+- **Blueprint Organization:**
+
+  **Dashboard Routes** (`routes/dashboard.py`)
+  - `GET /api/assets` - Get all assets with **optimized pipelining** ⚡
+  - `GET /api/assets/<id>` - Get specific asset details
+  - `GET /api/assets/nearby` - Geospatial proximity queries
+  - `POST /api/assets/<id>/update` - Update asset location
+  - `GET /api/dashboard/kpis` - Dashboard-level KPIs
+  - `GET /api/assets/<id>/kpis` - Asset-specific KPIs
+
+  **Sensor Routes** (`routes/sensors.py`)
+  - `POST /api/sensors/data` - Ingest sensor data via Redis Streams
+  - `GET /api/sensors/<id>/stream` - Get sensor time-series data
+  - `GET /api/sensors/active` - List all active sensors
+  - `GET /api/assets/<id>/sensors` - Get sensors for specific asset
+
+  **Alert Routes** (`routes/alerts.py`)
+  - `GET /api/dashboard/alerts` - Get active alerts from sorted set
+
+  **Search Routes** (`routes/search.py`)
+  - `GET /api/search/assets` - Full-text search with RediSearch
+  - `GET /api/search/suggestions` - Autocomplete suggestions
+
+  **Session Routes** (`routes/sessions.py`)
+  - `GET /api/sessions` - Get all active sessions
+  - `POST /api/sessions` - Create new session
+  - `GET /api/sessions/metrics` - Session statistics
+  - `GET /api/assets/<id>/sessions` - Asset-specific sessions
+  - `DELETE /api/sessions/<id>` - Delete session
+
+  **Monitoring Routes** (`routes/monitoring.py`)
+  - `GET /api/redis/commands` - Get recent Redis commands
+  - `POST /api/redis/commands/clear` - Clear command history
+  - `GET /api/redis/stats` - Get Redis command statistics
+
+- **Performance Optimizations:**
+  - ⚡ **Redis Pipelining** - Batch multiple commands to reduce network latency
+    - `/api/assets` endpoint: Reduced from 29 sequential calls to 2 pipelined calls
+    - **87% faster** - Response time improved from ~7.6s to <1s
+  - 🔄 **Connection Pooling** - Reuse Redis connections efficiently
+  - ⏱️ **Timeout Handling** - Graceful degradation with AbortController
+  - 📦 **Dependency Injection** - Blueprints receive Redis client and monitor instances
 
 #### 📊 Data Simulator
 - **Technology:** Python 3.8+, Redis client
