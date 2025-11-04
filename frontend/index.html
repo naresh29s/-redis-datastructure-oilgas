@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oil & Gas Field Operations - Redis Enterprise Demo</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 300;
+        }
+        
+        .header .subtitle {
+            color: #ecf0f1;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        
+        /* Tab Navigation */
+        .tab-navigation {
+            background: #34495e;
+            padding: 0 1rem;
+            border-bottom: 2px solid #3c5a78;
+            display: flex;
+            gap: 0;
+        }
+
+        .tab-button {
+            background: transparent;
+            border: none;
+            color: #bdc3c7;
+            padding: 1rem 2rem;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button:hover {
+            background: #3c5a78;
+            color: #ecf0f1;
+        }
+
+        .tab-button.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+            background: #2c3e50;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Dashboard Container */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 400px 350px;
+            gap: 1rem;
+            padding: 1rem;
+            min-height: calc(100vh - 180px);
+        }
+
+        /* Session Management Container */
+        .session-container {
+            padding: 1rem;
+            min-height: calc(100vh - 180px);
+        }
+
+        .session-panel {
+            background: #2c3e50;
+            border-radius: 8px;
+            padding: 1.5rem;
+            color: #ecf0f1;
+        }
+        
+        .panel {
+            background: #2c3e50;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border: 1px solid #34495e;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel h2 {
+            color: #3498db;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        #map {
+            flex: 1;
+            min-height: 0;
+            border-radius: 4px;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+        }
+        
+        .kpi-card {
+            background: #34495e;
+            padding: 1rem;
+            border-radius: 6px;
+            text-align: center;
+            border-left: 4px solid #3498db;
+        }
+        
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2ecc71;
+            margin: 0.5rem 0;
+        }
+        
+        .kpi-label {
+            color: #bdc3c7;
+            font-size: 0.9rem;
+        }
+        
+        .sensor-list {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+        }
+        
+        .sensor-item {
+            background: #34495e;
+            margin: 0.5rem 0;
+            padding: 0.8rem;
+            border-radius: 4px;
+            border-left: 3px solid #2ecc71;
+        }
+        
+        .sensor-item.warning {
+            border-left-color: #f39c12;
+        }
+        
+        .sensor-item.critical {
+            border-left-color: #e74c3c;
+        }
+
+        /* Alert Styling */
+        .alert-item {
+            background: #34495e;
+            margin: 0.5rem 0;
+            padding: 0.8rem;
+            border-radius: 4px;
+            border-left: 3px solid #f39c12;
+        }
+
+        .alert-item.critical {
+            border-left-color: #e74c3c;
+            background: #2c1810;
+        }
+
+        .alert-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .alert-icon {
+            font-size: 1.1rem;
+        }
+
+        .alert-severity {
+            margin-left: auto;
+            background: #3498db;
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .alert-item.critical .alert-severity {
+            background: #e74c3c;
+        }
+
+        .alert-details {
+            color: #bdc3c7;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            font-style: italic;
+        }
+
+        .alert-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #95a5a6;
+        }
+
+        .alert-location {
+            font-weight: 500;
+        }
+
+        .alert-time {
+            font-family: monospace;
+        }
+        
+        .sensor-name {
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        .sensor-values {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+        
+        .alert-item {
+            background: #e74c3c;
+            margin: 0.5rem 0;
+            padding: 0.8rem;
+            border-radius: 4px;
+            border-left: 4px solid #c0392b;
+        }
+        
+        .alert-item.warning {
+            background: #f39c12;
+            border-left-color: #d68910;
+        }
+        
+        .alert-time {
+            font-size: 0.8rem;
+            color: #ecf0f1;
+            opacity: 0.8;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        
+        .status-active { background: #2ecc71; }
+        .status-warning { background: #f39c12; }
+        .status-critical { background: #e74c3c; }
+        
+        .loading {
+            text-align: center;
+            color: #7f8c8d;
+            padding: 2rem;
+        }
+
+        /* Session Panel Styles */
+        .session-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .session-item {
+            background: #34495e;
+            padding: 0.8rem;
+            margin-bottom: 0.5rem;
+            border-radius: 4px;
+            border-left: 4px solid #3498db;
+        }
+
+        .session-user {
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .session-details {
+            font-size: 0.8rem;
+            color: #bdc3c7;
+            margin-top: 0.3rem;
+        }
+
+        /* Redis Command Monitor Styles */
+        .command-log {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            background: #1a1a1a;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+
+        .command-item {
+            padding: 0.3rem 0;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .command-timestamp {
+            color: #7f8c8d;
+            font-size: 0.7rem;
+        }
+
+        .command-text {
+            color: #2ecc71;
+            margin-left: 0.5rem;
+        }
+
+        .command-read { color: #3498db; }
+        .command-write { color: #e74c3c; }
+        .command-other { color: #f39c12; }
+
+        /* Responsive design */
+        @media (max-width: 1200px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 400px 350px 350px 350px 350px;
+                min-height: auto;
+            }
+
+            .search-container .dashboard-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto; /* Keep flexible height for search */
+                min-height: auto;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 400px 300px 300px 300px 300px;
+                min-height: auto;
+                padding: 0.75rem;
+            }
+
+            .search-container .dashboard-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto; /* Keep flexible height for search */
+                min-height: auto;
+                padding: 0.75rem;
+            }
+
+            .tab-button {
+                padding: 0.75rem 1.5rem;
+                font-size: 0.9rem;
+            }
+
+            .session-container {
+                padding: 0.75rem;
+            }
+
+            .session-panel {
+                padding: 1rem;
+            }
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #2c3e50;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #3498db;
+            border-radius: 3px;
+        }
+
+        /* Search Container Override */
+        .search-container .dashboard-container {
+            grid-template-rows: auto auto auto; /* Allow flexible height for search interface */
+            min-height: calc(100vh - 180px);
+        }
+
+        /* Ensure search interface panel has adequate height */
+        .search-container .panel:first-child {
+            min-height: 600px; /* Ensure search interface panel is tall enough */
+            height: auto;
+        }
+
+        /* Search Results Styles */
+        .search-results-container {
+            max-height: 800px;
+            overflow-y: auto;
+            border: 1px solid #34495e;
+            border-radius: 4px;
+            background: #1a252f;
+        }
+
+        .search-result-item {
+            padding: 1rem;
+            border-bottom: 1px solid #34495e;
+            transition: background-color 0.2s ease;
+        }
+
+        .search-result-item:hover {
+            background: #2c3e50;
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .search-result-title {
+            font-weight: bold;
+            color: #3498db;
+            font-size: 1.1rem;
+        }
+
+        .search-result-type {
+            background: #34495e;
+            color: #ecf0f1;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .search-result-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .search-result-detail {
+            color: #bdc3c7;
+        }
+
+        .search-result-detail strong {
+            color: #ecf0f1;
+        }
+
+        .search-result-actions {
+            margin-top: 0.5rem;
+        }
+
+        .search-result-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 0.25rem 0.75rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+        }
+
+        .search-result-button:hover {
+            background: #2980b9;
+        }
+
+        /* Radio Button Styles */
+        .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            min-height: 2.5rem; /* Ensure consistent height for radio groups */
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .radio-option input[type="radio"] {
+            margin-right: 0.5rem;
+            accent-color: #3498db;
+        }
+
+        .radio-option label {
+            color: #ecf0f1;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-transform: capitalize;
+        }
+
+        .radio-option label:hover {
+            color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛢️ Digital Twin System</h1>
+        <div class="subtitle">Redis Enterprise Demo for Halliburton - Real-time Digital Twin for Oil & Gas Operations</div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+        <button class="tab-button active" onclick="switchTab('dashboard')">📊 Dashboard</button>
+        <button class="tab-button" onclick="switchTab('sessions')">👥 Session Management</button>
+        <button class="tab-button" onclick="switchTab('search')">🔍 Search Field Assets</button>
+    </div>
+
+    <!-- Dashboard Tab Content -->
+    <div id="dashboard-tab" class="tab-content active">
+        <div class="dashboard-container">
+        <!-- Geospatial Asset Tracking -->
+        <div class="panel">
+            <h2>🗺️ Field Asset Locations</h2>
+            <div id="map"></div>
+        </div>
+        
+        <!-- Real-time KPIs -->
+        <div class="panel">
+            <h2>📊 Operational KPIs</h2>
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-value" id="total-assets">--</div>
+                    <div class="kpi-label">Total Assets</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value" id="active-sensors">--</div>
+                    <div class="kpi-label">Active Sensors</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value" id="avg-temperature">--°F</div>
+                    <div class="kpi-label">Avg Temperature</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value" id="avg-pressure">--</div>
+                    <div class="kpi-label">Avg Pressure (PSI)</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sensor Data Streaming -->
+        <div class="panel">
+            <h2>📡 Live Sensor Data</h2>
+            <div class="sensor-list" id="sensor-list">
+                <div class="loading">Loading sensor data...</div>
+            </div>
+        </div>
+        
+        <!-- Alerts and Notifications -->
+        <div class="panel">
+            <h2>🚨 Active Alerts</h2>
+            <div class="sensor-list" id="alerts-list">
+                <div class="loading">Loading alerts...</div>
+            </div>
+        </div>
+
+        <!-- Redis Command Monitor -->
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h2>⚡ Redis Commands</h2>
+                <button onclick="clearCommandHistory('dashboard')"
+                        style="background: #e74c3c; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 3px; cursor: pointer; font-size: 0.7rem;">
+                    Clear History
+                </button>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem;">
+                <span>Read: <span id="read-count" style="color: #3498db;">0</span></span>
+                <span>Write: <span id="write-count" style="color: #e74c3c;">0</span></span>
+                <span>Total: <span id="total-commands">0</span></span>
+            </div>
+            <div class="command-log" id="command-log">
+                <div class="loading">Loading commands...</div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Session Management Tab Content -->
+    <div id="sessions-tab" class="tab-content">
+        <div class="session-container">
+            <div class="dashboard-container">
+                <!-- Session Information Panel -->
+                <div class="panel">
+                    <h2>👥 Active Sessions</h2>
+                    <div class="kpi-grid" style="margin-bottom: 1.5rem;">
+                        <div class="kpi-card">
+                            <div class="kpi-value" id="total-sessions">--</div>
+                            <div class="kpi-label">Active Sessions</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-value" id="unique-users">--</div>
+                            <div class="kpi-label">Unique Users</div>
+                        </div>
+                    </div>
+                    <div class="session-list" id="session-list">
+                        <div class="loading">Loading sessions...</div>
+                    </div>
+                </div>
+
+                <!-- Session Redis Commands Panel -->
+                <div class="panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <h2>⚡ Session Redis Commands</h2>
+                        <button onclick="clearCommandHistory('session')"
+                                style="background: #e74c3c; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 3px; cursor: pointer; font-size: 0.7rem;">
+                            Clear History
+                        </button>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem;">
+                        <span>Read: <span id="session-read-count" style="color: #3498db;">0</span></span>
+                        <span>Write: <span id="session-write-count" style="color: #e74c3c;">0</span></span>
+                        <span>Total: <span id="session-total-commands">0</span></span>
+                    </div>
+                    <div class="command-log" id="session-command-log">
+                        <div class="loading">Loading session commands...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Field Assets Tab Content -->
+    <div id="search-tab" class="tab-content">
+        <div class="search-container">
+            <div class="dashboard-container">
+                <!-- Search Interface Panel -->
+                <div class="panel">
+                    <h2>🔍 Search Field Assets</h2>
+
+                    <!-- Search Input -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <input type="text" id="search-input" placeholder="Search assets by name, model, or description..."
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #34495e; border-radius: 4px; background: #2c3e50; color: #ecf0f1; font-size: 1rem;">
+                    </div>
+
+                    <!-- Filter Controls -->
+                    <div class="filter-controls" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1.5rem;">
+                        <!-- Dropdown Filters -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #bdc3c7; font-size: 0.9rem;">Asset Type:</label>
+                                <select id="type-filter" style="width: 100%; padding: 0.5rem; border: 1px solid #34495e; border-radius: 4px; background: #2c3e50; color: #ecf0f1;">
+                                    <option value="">All Types</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #bdc3c7; font-size: 0.9rem;">Region:</label>
+                                <select id="region-filter" style="width: 100%; padding: 0.5rem; border: 1px solid #34495e; border-radius: 4px; background: #2c3e50; color: #ecf0f1;">
+                                    <option value="">All Regions</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Radio Button Filters -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                            <!-- Manufacturer Radio Buttons -->
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #bdc3c7; font-size: 0.9rem;">Manufacturer:</label>
+                                <div class="radio-group" id="manufacturer-radio-group">
+                                    <div class="radio-option">
+                                        <input type="radio" id="manufacturer-all" name="manufacturer" value="" checked>
+                                        <label for="manufacturer-all">All</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="manufacturer-schlumberger" name="manufacturer" value="schlumberger">
+                                        <label for="manufacturer-schlumberger">Schlumberger</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="manufacturer-halliburton" name="manufacturer" value="halliburton">
+                                        <label for="manufacturer-halliburton">Halliburton</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="manufacturer-baker-hughes" name="manufacturer" value="baker hughes">
+                                        <label for="manufacturer-baker-hughes">Baker Hughes</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="manufacturer-weatherford" name="manufacturer" value="weatherford">
+                                        <label for="manufacturer-weatherford">Weatherford</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="manufacturer-nov" name="manufacturer" value="nov">
+                                        <label for="manufacturer-nov">NOV</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Status Radio Buttons -->
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #bdc3c7; font-size: 0.9rem;">Status:</label>
+                                <div class="radio-group" id="status-radio-group">
+                                    <div class="radio-option">
+                                        <input type="radio" id="status-all" name="status" value="" checked>
+                                        <label for="status-all">All</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="status-active" name="status" value="active">
+                                        <label for="status-active">Active</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="status-maintenance" name="status" value="maintenance">
+                                        <label for="status-maintenance">Maintenance</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="status-offline" name="status" value="offline">
+                                        <label for="status-offline">Offline</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="status-standby" name="status" value="standby">
+                                        <label for="status-standby">Standby</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sort Order Controls -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; color: #bdc3c7; font-size: 0.9rem;">Sort By:</label>
+                        <div class="radio-group" id="sort-radio-group">
+                            <div class="radio-option">
+                                <input type="radio" id="sort-none" name="sort" value="" checked>
+                                <label for="sort-none">Default</label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" id="sort-status-asc" name="sort" value="status-asc">
+                                <label for="sort-status-asc">Status (A-Z)</label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" id="sort-status-desc" name="sort" value="status-desc">
+                                <label for="sort-status-desc">Status (Z-A)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search Button -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <button id="search-button" onclick="performSearch()"
+                                style="background: #3498db; color: white; border: none; padding: 0.75rem 2rem; border-radius: 4px; cursor: pointer; font-size: 1rem; margin-right: 1rem;">
+                            🔍 Search Assets
+                        </button>
+                        <button onclick="clearSearch()"
+                                style="background: #95a5a6; color: white; border: none; padding: 0.75rem 2rem; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                            Clear
+                        </button>
+                    </div>
+
+                    <!-- Search Results Summary -->
+                    <div id="search-summary" style="margin-bottom: 1rem; color: #bdc3c7; font-size: 0.9rem;">
+                        Ready to search assets...
+                    </div>
+                </div>
+
+                <!-- Search Results Panel -->
+                <div class="panel">
+                    <h2>📋 Search Results</h2>
+                    <div id="search-results" class="search-results-container">
+                        <div class="loading">Enter search criteria and click "Search Assets" to find matching assets.</div>
+                    </div>
+                </div>
+
+                <!-- Redis Search Commands Panel -->
+                <div class="panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <h2>⚡ Redis Search Commands</h2>
+                        <button onclick="clearCommandHistory('search')"
+                                style="background: #e74c3c; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 3px; cursor: pointer; font-size: 0.7rem;">
+                            Clear History
+                        </button>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem;">
+                        <span>FT.SEARCH: <span id="search-ft-search-count" style="color: #3498db;">0</span></span>
+                        <span>FT.TAGVALS: <span id="search-ft-tagvals-count" style="color: #e74c3c;">0</span></span>
+                        <span>Total: <span id="search-total-commands">0</span></span>
+                    </div>
+                    <div class="command-log" id="search-command-log">
+                        <div class="loading">Loading search commands...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Main Application Script -->
+    <script>
+        // Configuration - Local development
+        const API_BASE_URL = 'http://localhost:5001';
+        
+        // Global variables
+        let map;
+        let assetMarkers = {};
+        let selectedAsset = null;
+        let selectedMarker = null;
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMap();
+            startDataUpdates();
+        });
+        
+        // ============================================================================
+        // MAP INITIALIZATION AND ASSET TRACKING
+        // ============================================================================
+        
+        function initializeMap() {
+            // Initialize Leaflet map (Texas Permian Basin)
+            map = L.map('map').setView([31.8457, -102.3676], 10);
+            
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Load initial assets
+            loadAssets();
+        }
+        
+        async function loadAssets() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/assets`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateAssetMarkers(data.assets);
+                }
+            } catch (error) {
+                console.error('Error loading assets:', error);
+            }
+        }
+        
+        function updateAssetMarkers(assets) {
+            // Clear existing markers
+            Object.values(assetMarkers).forEach(marker => map.removeLayer(marker));
+            assetMarkers = {};
+
+            // Add new markers
+            assets.forEach(asset => {
+                const icon = getAssetIcon(asset.type, asset.status);
+                const marker = L.marker([asset.latitude, asset.longitude], { icon })
+                    .addTo(map)
+                    .bindPopup(`
+                        <strong>${asset.name}</strong><br>
+                        Type: ${asset.type}<br>
+                        Status: <span class="status-${asset.status}">${asset.status}</span><br>
+                        Last Update: ${new Date(asset.last_update).toLocaleTimeString()}<br>
+                        <button onclick="selectAsset('${asset.id}')" style="margin-top: 5px; padding: 3px 8px; background: #3498db; color: white; border: none; border-radius: 3px; cursor: pointer;">Select Asset</button>
+                    `)
+                    .on('click', function() {
+                        selectAsset(asset.id);
+                    });
+
+                // Store asset data with marker
+                marker.assetData = asset;
+                assetMarkers[asset.id] = marker;
+            });
+        }
+        
+        function getAssetIcon(type, status) {
+            const colors = {
+                'active': '#2ecc71',
+                'maintenance': '#f39c12',
+                'offline': '#e74c3c'
+            };
+            
+            const icons = {
+                'drilling_rig': '🏗️',
+                'service_truck': '🚛',
+                'pump_jack': '⚡',
+                'compressor': '🔧',
+                'separator': '⚙️',
+                'tank_battery': '🛢️',
+                'pipeline_valve': '🔩',
+                'wellhead': '🕳️'
+            };
+            
+            return L.divIcon({
+                html: `<div style="background: ${colors[status] || '#7f8c8d'}; 
+                              border-radius: 50%; 
+                              width: 30px; 
+                              height: 30px; 
+                              display: flex; 
+                              align-items: center; 
+                              justify-content: center; 
+                              font-size: 16px; 
+                              border: 2px solid white;">
+                         ${icons[type] || '📍'}
+                       </div>`,
+                className: 'custom-div-icon',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+        }
+
+        // ============================================================================
+        // ASSET SELECTION FUNCTIONALITY
+        // ============================================================================
+
+        function selectAsset(assetId) {
+            // Clear previous selection
+            if (selectedMarker) {
+                selectedMarker.setIcon(getAssetIcon(selectedMarker.assetData.type, selectedMarker.assetData.status));
+            }
+
+            // Set new selection
+            selectedAsset = assetId;
+            selectedMarker = assetMarkers[assetId];
+
+            if (selectedMarker) {
+                // Highlight selected marker
+                selectedMarker.setIcon(getSelectedAssetIcon(selectedMarker.assetData.type, selectedMarker.assetData.status));
+
+                // Update dashboard title
+                updateAssetHeader(selectedMarker.assetData);
+
+                // Update all dashboard panels with asset-specific data
+                updateDashboardData();
+            }
+        }
+
+        function deselectAsset() {
+            if (selectedMarker) {
+                selectedMarker.setIcon(getAssetIcon(selectedMarker.assetData.type, selectedMarker.assetData.status));
+            }
+
+            selectedAsset = null;
+            selectedMarker = null;
+
+            // Reset dashboard title
+            const headerElement = document.querySelector('h1');
+            if (headerElement) {
+                headerElement.innerHTML = '🛢️ Digital Twin System';
+            }
+
+            // Update dashboard with overall data
+            updateDashboardData();
+        }
+
+        function updateAssetHeader(assetData) {
+            const headerElement = document.querySelector('h1');
+            if (headerElement) {
+                headerElement.innerHTML = `
+                    🛢️ Digital Twin: ${assetData.name} - ${assetData.type.replace('_', ' ').toUpperCase()}
+                    <button onclick="deselectAsset()" style="margin-left: 10px; padding: 2px 6px; background: #e74c3c; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.8em;">Show All</button>
+                `;
+            }
+        }
+
+        function getSelectedAssetIcon(type, status) {
+            // Create highlighted version of the icon
+            const colors = {
+                'active': '#e74c3c',      // Red for selected
+                'maintenance': '#e74c3c',
+                'inactive': '#e74c3c'
+            };
+
+            const icons = {
+                'drilling_rig': '🏗️',
+                'service_truck': '🚛',
+                'pump_jack': '⛽',
+                'compressor': '🔧',
+                'separator': '🏭',
+                'tank_battery': '🛢️',
+                'pipeline_valve': '🔧',
+                'wellhead': '🕳️'
+            };
+
+            return L.divIcon({
+                html: `<div style="background-color: ${colors[status] || colors.active};
+                              color: white;
+                              border-radius: 50%;
+                              width: 30px;
+                              height: 30px;
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                              font-size: 16px;
+                              border: 3px solid #fff;
+                              box-shadow: 0 0 10px rgba(231, 76, 60, 0.8);">
+                       ${icons[type] || '📍'}
+                       </div>`,
+                className: 'custom-div-icon',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+        }
+
+        // ============================================================================
+        // DASHBOARD DATA UPDATES
+        // ============================================================================
+        
+        function startDataUpdates() {
+            // Update data every 5 seconds
+            updateDashboardData();
+            setInterval(updateDashboardData, 5000);
+
+            // Update assets every 30 seconds
+            setInterval(loadAssets, 30000);
+
+            // Update sessions every 10 seconds
+            updateSessions();
+            setInterval(updateSessions, 10000);
+
+            // Update Redis commands every 2 seconds
+            updateRedisCommands();
+            setInterval(updateRedisCommands, 2000);
+        }
+        
+        async function updateDashboardData() {
+            await Promise.all([
+                updateKPIs(),
+                updateSensorData(),
+                updateAlerts()
+            ]);
+        }
+        
+        async function updateKPIs() {
+            try {
+                let endpoint = `${API_BASE_URL}/api/dashboard/kpis`;
+                if (selectedAsset) {
+                    endpoint = `${API_BASE_URL}/api/assets/${selectedAsset}/kpis`;
+                }
+
+                const response = await fetch(endpoint);
+                const data = await response.json();
+
+                if (data.success) {
+                    if (selectedAsset && data.kpis) {
+                        // Display asset-specific KPIs
+                        displayAssetKPIs(data.kpis);
+                    } else {
+                        // Display overall KPIs
+                        const kpis = data.kpis;
+                        document.getElementById('total-assets').textContent = kpis.total_assets || 0;
+                        document.getElementById('active-sensors').textContent = kpis.active_sensors || 0;
+                        document.getElementById('avg-temperature').textContent =
+                            kpis.avg_temperature ? `${kpis.avg_temperature}°F` : '--°F';
+                        document.getElementById('avg-pressure').textContent =
+                            kpis.avg_pressure ? `${Math.round(kpis.avg_pressure)}` : '--';
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating KPIs:', error);
+            }
+        }
+
+        function displayAssetKPIs(kpis) {
+            // Update KPI display for selected asset
+            const kpiContainer = document.querySelector('.kpi-grid');
+            if (!kpiContainer) return;
+
+            let kpiHTML = '';
+
+            // Helper function to format KPI values with proper decimal places
+            function formatKPIValue(value, unit = '') {
+                if (typeof value === 'number') {
+                    return parseFloat(value.toFixed(2)) + unit;
+                }
+                return value + unit;
+            }
+
+            // Display different KPIs based on asset type
+            if (kpis.asset_type === 'drilling_rig') {
+                kpiHTML = `
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.drilling_depth)}</div>
+                        <div class="kpi-label">Drilling Depth (ft)</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.drilling_rate)}</div>
+                        <div class="kpi-label">Rate (ft/hr)</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.efficiency, '%')}</div>
+                        <div class="kpi-label">Efficiency</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.uptime_hours)}</div>
+                        <div class="kpi-label">Uptime (hrs)</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.mud_weight)}</div>
+                        <div class="kpi-label">Mud Weight (ppg)</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.rotary_speed)}</div>
+                        <div class="kpi-label">Rotary Speed (rpm)</div>
+                    </div>
+                `;
+            } else if (kpis.asset_type === 'pump_jack' || kpis.asset_type === 'wellhead') {
+                kpiHTML = `
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.production_rate)}</div>
+                        <div class="kpi-label">Production (bpd)</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.water_cut, '%')}</div>
+                        <div class="kpi-label">Water Cut</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.pump_efficiency, '%')}</div>
+                        <div class="kpi-label">Efficiency</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.runtime_hours)}</div>
+                        <div class="kpi-label">Runtime (hrs)</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.pressure_avg)}</div>
+                        <div class="kpi-label">Avg Pressure (psi)</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.temperature_avg)}</div>
+                        <div class="kpi-label">Avg Temp (°F)</div>
+                    </div>
+                `;
+            } else if (kpis.asset_type === 'compressor') {
+                kpiHTML = `
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.throughput)}</div>
+                        <div class="kpi-label">Throughput (MMSCFD)</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.efficiency, '%')}</div>
+                        <div class="kpi-label">Efficiency</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.vibration_level)}</div>
+                        <div class="kpi-label">Vibration (mm/s)</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.operating_hours)}</div>
+                        <div class="kpi-label">Operating (hrs)</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.compression_ratio)}</div>
+                        <div class="kpi-label">Compression Ratio</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.fuel_consumption)}</div>
+                        <div class="kpi-label">Fuel (scf/hr)</div>
+                    </div>
+                `;
+            } else {
+                // Generic asset KPIs
+                kpiHTML = `
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.uptime || kpis.efficiency, '%')}</div>
+                        <div class="kpi-label">Efficiency</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${formatKPIValue(kpis.operating_hours)}</div>
+                        <div class="kpi-label">Operating (hrs)</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${kpis.status}</div>
+                        <div class="kpi-label">Status</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">${kpis.asset_type.replace('_', ' ')}</div>
+                        <div class="kpi-label">Type</div>
+                    </div>
+                `;
+            }
+
+            kpiContainer.innerHTML = kpiHTML;
+        }
+        
+        async function updateSensorData() {
+            try {
+                let endpoint = `${API_BASE_URL}/api/sensors/active`;
+                if (selectedAsset) {
+                    endpoint = `${API_BASE_URL}/api/assets/${selectedAsset}/sensors`;
+                }
+
+                const response = await fetch(endpoint);
+                const data = await response.json();
+
+                if (data.success) {
+                    displaySensorData(data.sensors);
+                }
+            } catch (error) {
+                console.error('Error updating sensor data:', error);
+            }
+        }
+        
+        function displaySensorData(sensors) {
+            const sensorList = document.getElementById('sensor-list');
+            
+            if (sensors.length === 0) {
+                sensorList.innerHTML = '<div class="loading">No sensor data available</div>';
+                return;
+            }
+            
+            const sensorHTML = sensors.map(sensor => {
+                const reading = sensor.latest_reading;
+                const temp = parseFloat(reading.temperature) || 0;
+                const pressure = parseFloat(reading.pressure) || 0;
+                const flowRate = parseFloat(reading.flow_rate) || 0;
+                const vibration = parseFloat(reading.vibration) || 0;
+                
+                // Determine status based on readings
+                let status = 'active';
+                if (temp > 100 || pressure > 3000 || vibration > 3) {
+                    status = 'critical';
+                } else if (temp > 90 || pressure > 2800 || vibration > 2.5) {
+                    status = 'warning';
+                }
+                
+                return `
+                    <div class="sensor-item ${status}">
+                        <div class="sensor-name">
+                            <span class="status-indicator status-${status}"></span>
+                            ${sensor.sensor_id}
+                        </div>
+                        <div class="sensor-values">
+                            ${temp > 0 ? `<span>🌡️ ${temp.toFixed(1)}°F</span>` : ''}
+                            ${pressure > 0 ? `<span>📊 ${pressure.toFixed(0)} PSI</span>` : ''}
+                            ${flowRate > 0 ? `<span>💧 ${flowRate.toFixed(1)} bbl/d</span>` : ''}
+                            ${vibration > 0 ? `<span>📳 ${vibration.toFixed(2)} mm/s</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            sensorList.innerHTML = sensorHTML;
+        }
+        
+        async function updateAlerts() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/dashboard/alerts`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayAlerts(data.alerts);
+                }
+            } catch (error) {
+                console.error('Error updating alerts:', error);
+            }
+        }
+        
+        function displayAlerts(alerts) {
+            const alertsList = document.getElementById('alerts-list');
+
+            if (alerts.length === 0) {
+                alertsList.innerHTML = '<div class="loading">No active alerts</div>';
+                return;
+            }
+
+            const alertsHTML = alerts.map(alert => {
+                const alertTime = new Date(alert.timestamp * 1000);
+                const timeString = alertTime.toLocaleTimeString();
+                const dateString = alertTime.toLocaleDateString();
+
+                // Determine severity styling
+                let severityClass = 'warning';
+                let severityIcon = '⚠️';
+                if (alert.severity === 'critical') {
+                    severityClass = 'critical';
+                    severityIcon = '🚨';
+                } else if (alert.severity === 'high') {
+                    severityClass = 'critical';
+                    severityIcon = '🔴';
+                } else if (alert.severity === 'warning') {
+                    severityIcon = '🟡';
+                }
+
+                return `
+                    <div class="alert-item ${severityClass}">
+                        <div class="alert-header">
+                            <span class="alert-icon">${severityIcon}</span>
+                            <strong>${alert.message}</strong>
+                            <span class="alert-severity">${alert.severity.toUpperCase()}</span>
+                        </div>
+                        <div class="alert-details">${alert.details || 'No additional details'}</div>
+                        <div class="alert-meta">
+                            <span class="alert-location">📍 ${alert.location}</span>
+                            <span class="alert-time">${dateString} ${timeString}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            alertsList.innerHTML = alertsHTML;
+        }
+        
+        // ============================================================================
+        // UTILITY FUNCTIONS
+        // ============================================================================
+        
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toString();
+        }
+
+        function switchTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Remove active class from all tab buttons
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => {
+                button.classList.remove('active');
+            });
+
+            // Show selected tab content
+            const selectedTab = document.getElementById(tabName + '-tab');
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+            }
+
+            // Add active class to clicked button
+            const clickedButton = event.target;
+            clickedButton.classList.add('active');
+
+            // Initialize search filters if switching to search tab
+            if (tabName === 'search') {
+                initializeSearchFilters();
+            }
+
+            // Update page title if asset is selected
+            if (selectedAsset && selectedMarker) {
+                updateAssetHeader(selectedMarker.assetData);
+            }
+        }
+        
+        // ============================================================================
+        // SESSION MANAGEMENT
+        // ============================================================================
+
+        async function updateSessions() {
+            try {
+                // Get session metrics (always global)
+                const metricsResponse = await fetch(`${API_BASE_URL}/api/sessions/metrics`);
+                const metricsData = await metricsResponse.json();
+
+                if (metricsData.success) {
+                    document.getElementById('total-sessions').textContent = metricsData.metrics.total_active_sessions;
+                    document.getElementById('unique-users').textContent = metricsData.metrics.unique_users;
+                }
+
+                // Get sessions (asset-specific if selected)
+                let sessionsEndpoint = `${API_BASE_URL}/api/sessions`;
+                if (selectedAsset) {
+                    sessionsEndpoint = `${API_BASE_URL}/api/assets/${selectedAsset}/sessions`;
+                }
+
+                const sessionsResponse = await fetch(sessionsEndpoint);
+                const sessionsData = await sessionsResponse.json();
+
+                if (sessionsData.success) {
+                    displaySessions(sessionsData.sessions);
+                }
+            } catch (error) {
+                console.error('Error updating sessions:', error);
+                document.getElementById('session-list').innerHTML = '<div class="loading">Error loading sessions</div>';
+            }
+        }
+
+        function displaySessions(sessions) {
+            const sessionList = document.getElementById('session-list');
+
+            if (sessions.length === 0) {
+                sessionList.innerHTML = '<div class="loading">No active sessions</div>';
+                return;
+            }
+
+            const sessionHTML = sessions.map(session => {
+                const userData = JSON.parse(session.user_data || '{}');
+                const createdAt = new Date(session.created_at).toLocaleTimeString();
+                const lastActivity = new Date(session.last_activity).toLocaleTimeString();
+
+                return `
+                    <div class="session-item">
+                        <div class="session-user">${userData.name || session.user_id}</div>
+                        <div class="session-details">
+                            Role: ${userData.role || 'Unknown'} | Location: ${userData.location || 'Unknown'}<br>
+                            Created: ${createdAt} | Last Activity: ${lastActivity}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            sessionList.innerHTML = sessionHTML;
+        }
+
+        // ============================================================================
+        // REDIS COMMAND MONITORING
+        // ============================================================================
+
+        async function updateRedisCommands() {
+            try {
+                // Get current active tab to determine context
+                const activeTab = document.querySelector('.tab-content.active').id;
+                let context = 'dashboard';
+                if (activeTab === 'sessions-tab') {
+                    context = 'session';
+                } else if (activeTab === 'search-tab') {
+                    context = 'search';
+                }
+
+                // Get command statistics
+                const statsResponse = await fetch(`${API_BASE_URL}/api/redis/stats?context=${context}`);
+                const statsData = await statsResponse.json();
+
+                if (statsData.success) {
+                    if (context === 'session') {
+                        document.getElementById('session-read-count').textContent = statsData.stats.read_count;
+                        document.getElementById('session-write-count').textContent = statsData.stats.write_count;
+                        document.getElementById('session-total-commands').textContent = statsData.stats.total_count;
+                    } else if (context === 'search') {
+                        // Update search-specific command counts
+                        const ftSearchCount = statsData.stats.command_counts?.['FT.SEARCH'] || 0;
+                        const ftTagvalsCount = statsData.stats.command_counts?.['FT.TAGVALS'] || 0;
+                        document.getElementById('search-ft-search-count').textContent = ftSearchCount;
+                        document.getElementById('search-ft-tagvals-count').textContent = ftTagvalsCount;
+                        document.getElementById('search-total-commands').textContent = statsData.stats.total_count;
+                    } else {
+                        document.getElementById('read-count').textContent = statsData.stats.read_count;
+                        document.getElementById('write-count').textContent = statsData.stats.write_count;
+                        document.getElementById('total-commands').textContent = statsData.stats.total_count;
+                    }
+                }
+
+                // Get recent commands (increased limit to show more history)
+                const commandsResponse = await fetch(`${API_BASE_URL}/api/redis/commands?limit=100&context=${context}`);
+                const commandsData = await commandsResponse.json();
+
+                if (commandsData.success) {
+                    if (context === 'session') {
+                        displayRedisCommands(commandsData.commands, 'session-command-log');
+                    } else if (context === 'search') {
+                        displayRedisCommands(commandsData.commands, 'search-command-log');
+                    } else {
+                        displayRedisCommands(commandsData.commands, 'command-log');
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating Redis commands:', error);
+                let logElement = 'command-log';
+                const activeTabId = document.querySelector('.tab-content.active').id;
+                if (activeTabId === 'sessions-tab') {
+                    logElement = 'session-command-log';
+                } else if (activeTabId === 'search-tab') {
+                    logElement = 'search-command-log';
+                }
+                document.getElementById(logElement).innerHTML = '<div class="loading">Error loading commands</div>';
+            }
+        }
+
+        function displayRedisCommands(commands, targetElementId = 'command-log') {
+            const commandLog = document.getElementById(targetElementId);
+
+            if (commands.length === 0) {
+                commandLog.innerHTML = '<div class="loading">No commands logged yet</div>';
+                return;
+            }
+
+            // Show most recent commands first (increased to show more history)
+            const recentCommands = commands.slice(-50).reverse();
+
+            const commandHTML = recentCommands.map(cmd => {
+                const timestamp = new Date(cmd.timestamp).toLocaleTimeString();
+                const commandClass = `command-${cmd.type}`;
+                const keyInfo = cmd.key ? ` ${cmd.key}` : '';
+
+                return `
+                    <div class="command-item">
+                        <span class="command-timestamp">${timestamp}</span>
+                        <span class="command-text ${commandClass}">${cmd.command}${keyInfo}</span>
+                    </div>
+                `;
+            }).join('');
+
+            commandLog.innerHTML = commandHTML;
+
+            // Auto-scroll to bottom to show latest commands
+            commandLog.scrollTop = commandLog.scrollHeight;
+        }
+
+        async function clearCommandHistory(context) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/redis/commands/clear`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ context: context })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Clear the display immediately
+                    let logElementId = 'command-log';
+                    if (context === 'session') {
+                        logElementId = 'session-command-log';
+                    } else if (context === 'search') {
+                        logElementId = 'search-command-log';
+                    }
+
+                    document.getElementById(logElementId).innerHTML = '<div class="loading">Command history cleared</div>';
+
+                    // Reset counters
+                    if (context === 'session') {
+                        document.getElementById('session-read-count').textContent = '0';
+                        document.getElementById('session-write-count').textContent = '0';
+                        document.getElementById('session-total-commands').textContent = '0';
+                    } else if (context === 'search') {
+                        document.getElementById('search-ft-search-count').textContent = '0';
+                        document.getElementById('search-ft-tagvals-count').textContent = '0';
+                        document.getElementById('search-total-commands').textContent = '0';
+                    } else {
+                        document.getElementById('read-count').textContent = '0';
+                        document.getElementById('write-count').textContent = '0';
+                        document.getElementById('total-commands').textContent = '0';
+                    }
+
+                    console.log(`Command history cleared for context: ${context}`);
+                } else {
+                    console.error('Failed to clear command history:', data.error);
+                }
+            } catch (error) {
+                console.error('Error clearing command history:', error);
+            }
+        }
+
+        // ============================================================================
+        // ASSET SEARCH FUNCTIONALITY
+        // ============================================================================
+
+        async function initializeSearchFilters() {
+            try {
+                // Load filter options from API for dropdown filters only (type and region)
+                const dropdownFields = ['type', 'region'];
+
+                for (const field of dropdownFields) {
+                    const response = await fetch(`${API_BASE_URL}/api/search/suggestions?field=${field}`);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const selectElement = document.getElementById(`${field}-filter`);
+                        data.suggestions.forEach(suggestion => {
+                            const option = document.createElement('option');
+                            option.value = suggestion;
+                            option.textContent = suggestion.replace('_', ' ').toUpperCase();
+                            selectElement.appendChild(option);
+                        });
+                    }
+                }
+
+                // Radio buttons for manufacturer and status are hardcoded in HTML
+                console.log('Search filters initialized successfully');
+            } catch (error) {
+                console.error('Error loading search filters:', error);
+            }
+        }
+
+        async function performSearch() {
+            try {
+                const query = document.getElementById('search-input').value.trim();
+                const type = document.getElementById('type-filter').value;
+                const manufacturer = document.querySelector('input[name="manufacturer"]:checked').value;
+                const status = document.querySelector('input[name="status"]:checked').value;
+                const region = document.getElementById('region-filter').value;
+                const sortOrder = document.querySelector('input[name="sort"]:checked').value;
+
+                // Build query parameters
+                const params = new URLSearchParams();
+                if (query) params.append('q', query);
+                if (type) params.append('type', type);
+                if (manufacturer) params.append('manufacturer', manufacturer);
+                if (status) params.append('status', status);
+                if (region) params.append('region', region);
+                params.append('limit', '50');
+
+                // Show loading state
+                document.getElementById('search-results').innerHTML = '<div class="loading">Searching assets...</div>';
+                document.getElementById('search-summary').textContent = 'Searching...';
+
+                // Perform search
+                const response = await fetch(`${API_BASE_URL}/api/search/assets?${params.toString()}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displaySearchResults(data);
+                    updateSearchSummary(data);
+                } else {
+                    document.getElementById('search-results').innerHTML = `<div class="loading">Error: ${data.error}</div>`;
+                }
+
+            } catch (error) {
+                console.error('Error performing search:', error);
+                document.getElementById('search-results').innerHTML = '<div class="loading">Error performing search</div>';
+            }
+        }
+
+        function displaySearchResults(data) {
+            const resultsContainer = document.getElementById('search-results');
+
+            if (data.assets.length === 0) {
+                resultsContainer.innerHTML = '<div class="loading">No assets found matching your search criteria.</div>';
+                return;
+            }
+
+            // Apply client-side sorting
+            const sortOrder = document.querySelector('input[name="sort"]:checked').value;
+            let sortedAssets = [...data.assets];
+
+            if (sortOrder === 'status-asc') {
+                sortedAssets.sort((a, b) => a.status.localeCompare(b.status));
+            } else if (sortOrder === 'status-desc') {
+                sortedAssets.sort((a, b) => b.status.localeCompare(a.status));
+            }
+
+            const resultsHTML = sortedAssets.map(asset => `
+                <div class="search-result-item">
+                    <div class="search-result-header">
+                        <div class="search-result-title">${asset.name}</div>
+                        <div class="search-result-type">${asset.type.replace('_', ' ')}</div>
+                    </div>
+                    <div class="search-result-details">
+                        <div class="search-result-detail"><strong>ID:</strong> ${asset.id}</div>
+                        <div class="search-result-detail"><strong>Manufacturer:</strong> ${asset.manufacturer}</div>
+                        <div class="search-result-detail"><strong>Model:</strong> ${asset.model}</div>
+                        <div class="search-result-detail"><strong>Status:</strong> <span class="status-${asset.status}">${asset.status}</span></div>
+                        <div class="search-result-detail"><strong>Region:</strong> ${asset.region}</div>
+                        <div class="search-result-detail"><strong>Zone:</strong> ${asset.zone}</div>
+                        <div class="search-result-detail"><strong>Temperature:</strong> ${asset.temperature}°C</div>
+                        <div class="search-result-detail"><strong>Pressure:</strong> ${asset.pressure} PSI</div>
+                        <div class="search-result-detail"><strong>Flow Rate:</strong> ${asset.flow_rate} bbl/hr</div>
+                        <div class="search-result-detail"><strong>Team:</strong> ${asset.team}</div>
+                    </div>
+                    <div class="search-result-actions">
+                        <button class="search-result-button" onclick="selectAssetFromSearch('${asset.id}')">
+                            📍 View on Map
+                        </button>
+                        <button class="search-result-button" onclick="viewAssetDetails('${asset.id}')">
+                            📊 View Details
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            resultsContainer.innerHTML = resultsHTML;
+        }
+
+        function updateSearchSummary(data) {
+            const summary = document.getElementById('search-summary');
+            const queryText = data.query === '*' ? 'all assets' : `"${data.query}"`;
+            const filtersText = Object.values(data.filters).filter(f => f).length > 0 ?
+                ` with filters applied` : '';
+
+            summary.textContent = `Found ${data.total} assets matching ${queryText}${filtersText}. Showing ${data.count} results.`;
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('type-filter').value = '';
+            document.getElementById('region-filter').value = '';
+
+            // Reset radio buttons to "All" options
+            document.getElementById('manufacturer-all').checked = true;
+            document.getElementById('status-all').checked = true;
+            document.getElementById('sort-none').checked = true;
+
+            document.getElementById('search-results').innerHTML = '<div class="loading">Enter search criteria and click "Search Assets" to find matching assets.</div>';
+            document.getElementById('search-summary').textContent = 'Ready to search assets...';
+        }
+
+        function selectAssetFromSearch(assetId) {
+            // Switch to dashboard tab and select the asset
+            switchTab('dashboard');
+            setTimeout(() => {
+                selectAsset(assetId);
+            }, 100);
+        }
+
+        function viewAssetDetails(assetId) {
+            // Switch to dashboard tab and select the asset
+            selectAssetFromSearch(assetId);
+        }
+
+        // Add search input event listener for Enter key
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        performSearch();
+                    }
+                });
+            }
+        });
+
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled promise rejection:', event.reason);
+        });
+
+        console.log('🛢️ Oil & Gas Field Operations Dashboard Initialized');
+        console.log(`📡 API Base URL: ${API_BASE_URL}`);
+    </script>
+</body>
+</html>
